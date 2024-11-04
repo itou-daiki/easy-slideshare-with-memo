@@ -1,31 +1,36 @@
-# Streamlitライブラリをインポート
 import streamlit as st
+from pptx import Presentation
+from io import BytesIO
+from PIL import Image
+import tempfile
 
-# ページ設定（タブに表示されるタイトル、表示幅）
-st.set_page_config(page_title="タイトル", layout="wide")
+# タイトル設定
+st.title("PPTX Viewer with Notes")
 
-# タイトルを設定
-st.title('Streamlitのサンプルアプリ')
+# ファイルアップロード
+uploaded_file = st.file_uploader("Upload a PPTX file", type="pptx")
 
-# テキスト入力ボックスを作成し、ユーザーからの入力を受け取る
-user_input = st.text_input('あなたの名前を入力してください')
-
-# ボタンを作成し、クリックされたらメッセージを表示
-if st.button('挨拶する'):
-    if user_input:  # 名前が入力されているかチェック
-        st.success(f'🌟 こんにちは、{user_input}さん! 🌟')  # メッセージをハイライト
-    else:
-        st.error('名前を入力してください。')  # エラーメッセージを表示
-
-# スライダーを作成し、値を選択
-number = st.slider('好きな数字（10進数）を選んでください', 0, 100)
-
-# 補足メッセージ
-st.caption("十字キー（左右）でも調整できます。")
-
-# 選択した数字を表示
-st.write(f'あなたが選んだ数字は「{number}」です。')
-
-# 選択した数値を2進数に変換
-binary_representation = bin(number)[2:]  # 'bin'関数で2進数に変換し、先頭の'0b'を取り除く
-st.info(f'🔢 10進数の「{number}」を2進数で表現すると「{binary_representation}」になります。 🔢')  # 2進数の表示をハイライト
+if uploaded_file is not None:
+    # Presentationを読み込む
+    presentation = Presentation(uploaded_file)
+    
+    # スライドとメモの保存用リスト
+    slides = []
+    notes = []
+    
+    # スライドとメモの取得
+    for slide in presentation.slides:
+        # スライド画像の作成（仮の画像としてテキストを含むサムネイル作成）
+        img = Image.new('RGB', (720, 540), color='white')
+        slides.append(img)
+        
+        # メモの取得
+        note = slide.notes_slide.notes_text_frame.text if slide.has_notes_slide else "No notes available"
+        notes.append(note)
+    
+    # スライドとメモの表示
+    for i, (slide_img, note) in enumerate(zip(slides, notes)):
+        st.image(slide_img, caption=f"Slide {i+1}")
+        st.write("**Notes:**")
+        st.write(note)
+        st.markdown("---")
