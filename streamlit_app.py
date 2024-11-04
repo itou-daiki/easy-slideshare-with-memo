@@ -1,36 +1,51 @@
 import streamlit as st
 from pptx import Presentation
-from io import BytesIO
-from PIL import Image
-import tempfile
+import io
+import base64
 
-# タイトル設定
-st.title("PPTX Viewer with Notes")
+# アプリのタイトルと作成者情報
+st.title("PowerPoint Slide Viewer")
+st.caption("Created by Dit-Lab.(Daiki Ito)")
 
-# ファイルアップロード
-uploaded_file = st.file_uploader("Upload a PPTX file", type="pptx")
+# アプリの説明
+st.markdown("""
+## **概要**
+このウェブアプリケーションでは、PowerPointファイルをアップロードし、スライドとメモを表示することができます。
+""")
+
+# ファイルアップローダー
+uploaded_file = st.file_uploader("PowerPointファイルをアップロードしてください", type=['pptx'])
 
 if uploaded_file is not None:
-    # Presentationを読み込む
-    presentation = Presentation(uploaded_file)
+    # PowerPointファイルを読み込む
+    prs = Presentation(uploaded_file)
     
-    # スライドとメモの保存用リスト
-    slides = []
-    notes = []
+    # スライドの選択
+    total_slides = len(prs.slides)
+    slide_number = st.slider("スライドを選択", 1, total_slides, 1)
     
-    # スライドとメモの取得
-    for slide in presentation.slides:
-        # スライド画像の作成（仮の画像としてテキストを含むサムネイル作成）
-        img = Image.new('RGB', (720, 540), color='white')
-        slides.append(img)
-        
-        # メモの取得
-        note = slide.notes_slide.notes_text_frame.text if slide.has_notes_slide else "No notes available"
-        notes.append(note)
+    # 選択したスライドとそのメモを表示
+    current_slide = prs.slides[slide_number - 1]
     
-    # スライドとメモの表示
-    for i, (slide_img, note) in enumerate(zip(slides, notes)):
-        st.image(slide_img, caption=f"Slide {i+1}")
-        st.write("**Notes:**")
-        st.write(note)
-        st.markdown("---")
+    # スライドを画像として保存
+    image_stream = io.BytesIO()
+    current_slide.save(image_stream, "PNG")
+    image_stream.seek(0)
+    image_data = base64.b64encode(image_stream.getvalue()).decode()
+    
+    # スライドを画像として表示
+    st.image(f"data:image/png;base64,{image_data}", use_column_width=True)
+    
+    # スライドのメモを表示
+    st.subheader("スライドメモ")
+    notes_slide = current_slide.notes_slide
+    if notes_slide and notes_slide.notes_text_frame.text:
+        st.write(notes_slide.notes_text_frame.text)
+    else:
+        st.write("このスライドにメモはありません。")
+
+# コピーライト情報
+st.markdown("---")
+st.subheader('© 2022-2024 Dit-Lab.(Daiki Ito). All Rights Reserved.')
+st.write("PowerPoint Slide Viewer: Making presentations accessible")
+st.write("Democratizing presentation sharing, everywhere.")
